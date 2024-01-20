@@ -21,6 +21,7 @@ pub use ui::{
 pub use utils::create_joystick;
 
 use ui::{extract_joystick_node, VirtualJoystickData};
+use crate::input::{run_if_wasm, update_joystick_by_touch_in_wasm};
 
 #[derive(Default)]
 pub struct VirtualJoystickPlugin<S> {
@@ -58,6 +59,12 @@ impl<S: VirtualJoystickID> Plugin for VirtualJoystickPlugin<S> {
                 update_joystick_by_mouse
                     .before(update_input::<S>)
                     .run_if(run_if_pc),
+            )
+            .add_systems(
+                PreUpdate,
+               update_joystick_by_touch_in_wasm
+                    .before(update_input::<S>)
+                   .run_if(run_if_wasm),
             )
             .add_systems(PreUpdate, update_input::<S>)
             .add_systems(

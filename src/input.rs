@@ -21,6 +21,17 @@ pub fn run_if_pc() -> bool {
     !["android", "ios"].contains(&std::env::consts::OS)
 }
 
+pub fn run_if_wasm() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        true
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        false
+    }
+}
+
 fn is_some_and<T>(opt: Option<T>, cb: impl FnOnce(T) -> bool) -> bool {
     if let Some(v) = opt {
         return cb(v);
@@ -175,4 +186,42 @@ pub fn update_joystick_by_mouse(
     if mouse_button_input.pressed(MouseButton::Left) {
         send_values.send(InputEvent::Dragging { id: 0, pos });
     }
+}
+
+// "It needs to be set to fullscreen in CSS for index.html."
+pub fn update_joystick_by_touch_in_wasm(
+    mut touches: Res<Touches>,
+    mut send_values: EventWriter<InputEvent>,
+) {
+    for touch in touches.iter() {
+        let id = touch.id();
+        let pos = touch.position();
+
+        let phase = if touches.just_pressed(id) {
+            TouchPhase::Started
+        } else if touches.get_pressed(id).is_some() {
+            TouchPhase::Moved
+        } else {
+            continue; // No relevant change to process
+        };
+
+        match phase {
+            TouchPhase::Started => {
+
+                send_values.send(InputEvent::StartDrag { id, pos });
+            }
+            TouchPhase::Moved => {
+
+                send_values.send(InputEvent::Dragging { id, pos });
+            }
+            _ => {} // Other phases are not handled
+        }
+    }
+
+    for touch in touches.iter_just_released() {
+        let id = touch.id();
+        let pos = touch.position();
+        send_values.send(InputEvent::EndDrag { id, pos });
+    }
+
 }
